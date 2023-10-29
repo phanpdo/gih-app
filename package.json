@@ -1,0 +1,56 @@
+{
+  "name": "gih-app",
+  "version": "1.0.0",
+  "description": "gih electronjs app",
+  "authors": "gih",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-deb": "^6.4.2",
+    "@electron-forge/maker-rpm": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^6.4.2",
+    "asar": "^3.2.0",
+    "electron": "^27.0.2"
+  },
+  "build": {
+    "appId": "gih.local_server.app",
+    "productName": "GIH Local Server",
+    "mac": {
+      "icon": "favcon.icns"
+    },
+    "win": {
+      "icon": "favicon.ico"
+    },
+    "extraResources": [
+      {
+        "from": "resources/local_server/local_server.exe",
+        "to": "local_server/local_server.exe"
+      },
+      {
+        "from": "resources/local_server/localhost.crt",
+        "to": "local_server/localhost.crt"
+      },
+      {
+        "from": "resources/local_server/localhost.key",
+        "to": "local_server/localhost.key"
+      },
+      {
+        "from": "resources/local_server/config.json",
+        "to": "local_server/config.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.0"
+  }
+}

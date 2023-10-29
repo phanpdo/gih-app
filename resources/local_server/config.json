@@ -1,0 +1,6 @@
+{
+    "port": 9000,
+    "server_url": "http://10.0.0.32:3001/graphql",
+    "auto_sync": true,
+    "graph_server_connected": true
+}
