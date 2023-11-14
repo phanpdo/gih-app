@@ -47,10 +47,18 @@
       {
         "from": "resources/local_server/config.json",
         "to": "local_server/config.json"
+      },
+      {
+        "from": "resources/local_server/message.html",
+        "to": "local_server/message.html"
       }
     ]
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.0"
+    "electron-squirrel-startup": "^1.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
   }
 }

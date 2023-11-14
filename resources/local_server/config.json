@@ -1,6 +1,9 @@
 {
-    "port": 9000,
-    "server_url": "http://10.0.0.32:3001/graphql",
-    "auto_sync": true,
-    "graph_server_connected": true
+  "port": 9001,
+  "graphql_server_url": "https://64.190.226.203/graphql",
+  "auto_sync": true,
+  "graphql_server_connected": false,
+  "version": "1.1",
+  "is_graphql_online": false,
+  "master_url": "https://192.168.56.1:9001"
 }

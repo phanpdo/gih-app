@@ -1,4 +1,6 @@
 dist/
 node_modules/
-
 out/
+logs/
+resources/local_server/*.pid
+resources/local_server/data/
