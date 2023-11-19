@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>Camera and Fullscreen Example</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const cameraDeviceId = urlParams.get('device_id');
+        initSSE();
+    </script>
+</head>
+
+<body>
+
+    <video id="camera"
+           autoplay></video>
+
+    <script>
+        // Get the video element
+        const video = document.getElementById('camera');
+
+        // Try to access the camera
+        navigator.mediaDevices.getUserMedia({ video: true, deviceId: cameraDeviceId })
+            .then((stream) => {
+                // Attach the camera stream to the video element
+                video.srcObject = stream;
+            })
+            .catch((error) => {
+                console.error('Error accessing camera:', error);
+            });
+
+        // Enable fullscreen mode when the document is clicked
+        document.addEventListener('click', () => {
+            if (document.fullscreenElement) {
+                // If already in fullscreen, exit fullscreen
+                document.exitFullscreen();
+            } else {
+                // If not in fullscreen, request fullscreen on the document
+                document.documentElement.requestFullscreen().catch((error) => {
+                    console.error('Error entering fullscreen mode:', error);
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

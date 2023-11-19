@@ -3,80 +3,147 @@
 
 <head>
     <title>GIH OnSite App</title>
+    <script src="./app_utils.js"></script>
+    <link rel="stylesheet"
+          href="app_style.css">
     <style>
         .Settings {
             display: flex;
             flex-direction: column;
             margin: 20px;
             padding: 10px;
+            font-family: Roboto, Helvetica, Arial, sans-serif;
+            font-size: 20px;
         }
 
-        .buttons {
-            display: flex;
+        input#port {
+            width: 100px;
         }
 
-        button {
-            align-items: center;
-            background: #D4ED31;
-            border: 1px solid var(--ion-border-color);
-            border-radius: 5em;
-            color: var(--ion-color-primary-contrast);
-            display: flex;
-            font-size: .9em;
-            font-weight: 700;
-            max-height: 56px;
-            max-width: 6em;
-            padding: 1em 2em 1em 1.5em;
-            white-space: nowrap;
-            margin-top: 20px;
-        }
-
-        input {
-            height: 40px;
-            border-radius: 4px;
-            width: 240px;
-        }
-
-        span {
-            color: red;
+        .Settings {
+            display: grid;
+            grid-template-columns: .4fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
         }
     </style>
+    <script>
+        async function getStations() {
+            let tournament_id = await getLocalTournamentId();
+            let name = `tournament.${tournament_id}.stations`;
+            let params = { name }
+            let r = await postServer('/getData', params);
+            if (r) {
+                try {
+                    return JSON.parse(r.message);
+                } catch (e) {
+                    console.log('getStations: ' + name + ': ', e);
+                }
+            }
+        }
+
+        if (localServerError) {
+            document.getElementById('station_type').disabled = true;
+        }
+
+        async function loadCameraOption() {
+            let stations = await getStations();
+            let scorecards = Object.keys(stations||[])
+                .filter(s => {
+                    return stations[s].type === 'SC' && stations[s].label;
+                })
+                .map(s => ({value: s, label: stations[s].label}));
+            let cameraSCEl = document.getElementById('camera_score_card');    
+            if (scorecards.length === 0){
+                createSelectOptions([{value: '', label: 'No Score Card Station Available'}], cameraSCEl);
+            }else {
+                createSelectOptions(scorecards, cameraSCEl);
+            }
+        }
+
+        async function loadCameraDeviceOption(){
+            let cameras = await listCameraDevices();
+            let cameraDeviceEl = document.getElementById('camera_device');
+            createSelectOptions(cameras.map(c => ({value: c.deviceId, label: c.label})), cameraDeviceEl);
+        }
+
+        function updateUI() {
+            let portEl = document.getElementById('port');
+            let stationEl = document.getElementById('station_type');
+            let stype = stationEl.value || station_type;
+            let toggleEls = ['camera', 'master_station', 'station'];
+            toggleEls.forEach(s => toggleShow(s, false));
+            if (stype !== 'MASTER') {
+                toggleShow('station', true);
+                if (stype === 'CA') {
+                    toggleShow('camera', true);
+                    loadCameraOption();
+                    loadCameraDeviceOption();
+                }
+            } else {
+                toggleShow('master_station', true);
+                portEl.disabled = false;
+            }
+        }
+    </script>
 </head>
 
 <body>
     <h1>App Settings</h1>
+    <span id="message"></span>
     <div class="Settings">
-        <span id="message"></span>
-        <select id="stationType">
+        <label><span>Station Type</span></label>
+        <select id="station_type"
+                onchange="updateUI()">
             <option value="MASTER">Master</option>
             <option value="SC">Score Card</option>
+            <option value="CA">Mat Camera</option>
             <option value="WI">Weight In</option>
-            <option value="">Score Card</option>
+            <option value="BR">Bracket</option>
         </select>
-        <div class="Master">
-            <b>Master Server Port</b>
-            <input id="port">
-            <div class="buttons">
-                <button id="updateButton">Update</button>
-                <button id="cancelButton">Cancel</button>
-            </div>
+        <label class="master_station"><span>Master Server Port</span></label>
+        <input class="master_station" id="port">
+        <label class="station"><span>Master Server URL</span></label>
+        <input class="station" id="master_url">
+        <label class="camera"><span>Select a Score Card Station</span></label>
+        <select id="camera_score_card"
+                class="camera">
+        </select>
+        <label class="camera"><span>Select a Camera Device</span></label>
+        <select id="camera_device"
+                class="camera">
+        </select>
+
+        <div class="buttons">
+            <button id="updateButton">Update</button>
+            <button id="cancelButton">Cancel</button>
         </div>
     </div>
     <script>
-        document.getElementById("updateButton")
-            .addEventListener("click", function () {
-                let message = document.getElementById('message');
-                message.innerHTML = '';
-                let p = document.getElementById('port').value;
-                if (p && !isNaN(p)) {
-                    return electronAPI.sendMessage({ message: 'updateMaster', port: parseInt(p) });
-                }
-                message.innerHTML = 'Port value is invalid must be a number';
-            });
-        document.getElementById("cancelButton")
-            .addEventListener("click", function () {
-                electronAPI.sendMessage({ message: 'cancelSettings' });
-            });
+        updateUI();
+        document.getElementById('station_type').value = station_type;
+        document.getElementById('port').value = port;
+        document.getElementById("updateButton").addEventListener("click", function () {
+            let message = document.getElementById('message');
+            message.innerHTML = '';
+            let p = document.getElementById('port').value;
+            let sType = document.getElementById('station_type').value;
+            let cameraScoreCard = document.getElementById('camera_score_card').value;
+            let camera_device = document.getElementById('camera_device').value;
+            if (p && !isNaN(p)) {
+                return electronAPI.sendMessage({ 
+                    message: 'updateApp', 
+                    port: parseInt(p), 
+                    station_type: sType, 
+                    camera_score_card: cameraScoreCard,
+                    camera_device
+                });
+            }
+            message.innerHTML = 'Port value is invalid must be a number';
+        });
+        document.getElementById("cancelButton").addEventListener("click", function () {
+            electronAPI.sendMessage({ message: 'cancelSettings' });
+        });
     </script>
 </body>
 

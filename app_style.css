@@ -1,0 +1,39 @@
+.buttons {
+    display: flex;
+}
+
+button {
+    align-items: center;
+    background: #D4ED31;
+    border: 1px solid var(--ion-border-color);
+    border-radius: 5em;
+    color: var(--ion-color-primary-contrast);
+    display: flex;
+    font-size: .7em;
+    font-weight: 700;
+    max-height: 40px;
+    max-width: 6em;
+    padding: 1em 2em 1em 1.5em;
+    white-space: nowrap;
+    margin-top: 20px;
+    font-family: Inter, sans-serif;
+}
+
+input,
+select {
+    height: 50px;
+    border-radius: 10px;
+    width: 300px;
+    font-size: .8em;
+    border: gray 1px solid;
+}
+
+label {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+}
+
+span#message {
+    color: red;
+}

@@ -6,6 +6,13 @@ const path = require("path");
 const logger = require('./logger');
 const React = require('react');
 const ReactDOM = require('react-dom');
+const STATION_TYPE = {
+    master: "MASTER",
+    score_card: "SC",
+    weight_in: "WI",
+    camera: "CA",
+    bracket: "BR",
+}
 
 let win;
 let localServerError = false;
@@ -16,9 +23,11 @@ const isWindows = os.platform() === 'win32';
 const localServerDir = './resources/local_server';
 let localHostProcess;
 let config;
+loadConfig();
 
 function restartServer() {
     logger.info('Restarting server...');
+    localServerError = false;
     stopServer(() => {
         startServer();
         loadServerURL();
@@ -65,12 +74,29 @@ function stopServer(callback) {
     });
 }
 
-function updateMaster(data) {
-    if (config.port !== data.port || config.graphql_server_url !== data.graphql_server_url) {
-        let configPath = `${localServerDir}/config.json`;
+function setStation(data=config) {
+    const { station_type=STATION_TYPE.master } = data;
+    if (station_type === STATION_TYPE.master) {
+        if (config.port !== data.port || config.graphql_server_url !== data.graphql_server_url) {
+            let configPath = `${localServerDir}/config.json`;
+            restartServer();
+        }else if (!localHostProcess){
+            startServer();
+        }
+    } else if (station_type === STATION_TYPE.camera) {
+        let cameraPath = `file://${path.join(__dirname, 'camera.html')}`;
+        win.loadURL(`${cameraPath}?score_card=${data.camer_score_card}&device_id=${data.camera_device}`);
+    } else {
+        win.loadURL(`https://localhost:${config.port}/local/${config.station_type}`);
+    }
+}
+
+function updateApp(data) {
+    try{
+        setStation(data);
+    }finally{
         let c = { ...config, port: data.port };
         saveFile(configPath, JSON.stringify(c));
-        restartServer();
     }
 }
 
@@ -81,7 +107,7 @@ function serverMessage(data) {
         localServerError = true;
         messageHTML = messageHTML.replace('$message',
             `Port ${data.split(messagMap.port_not_available)[1]} is not available. Go
-             to Settings from the File menu and change the port number.`);
+             to Settings from the File menu and change the master port number.  Or select to run as a station.`);
         win.loadURL(`data:text/html,${encodeURIComponent(messageHTML)}`);
     } else if (data === 'local_server_up') {
         loadServerURL();
@@ -108,8 +134,8 @@ function startServer() {
             for (let l of data.split('\n')) {
                 if (l.startsWith(electronKey)) {
                     let d = JSON.parse(l.split(electronKey)[1]);
-                    if (d.message === 'updateMaster') {
-                        updateMaster(d.data);
+                    if (d.message === 'updateApp') {
+                        updateApp(d.data);
                     } else if (d.message === 'serverMessage') {
                         serverMessage(d.data);
                     }
@@ -157,7 +183,10 @@ function setMenu() {
             label: 'App Settings',
             icon: nativeImage.createFromPath(path.join(__dirname, 'resources/local_server/settings.png')),
             click: () => {
-                win.loadFile('settings.html');
+                let stationType = config.station_type || STATION_TYPE.master;
+                stationType = localServerError ? STATION_TYPE.master : stationType;
+                let settingsPath = `file://${path.join(__dirname, 'settings.html')}`;
+                win.loadURL(`${settingsPath}?localServerError=${localServerError}&port=${config.port}&station_type=${stationType}`);
             },
         })
     );
@@ -174,38 +203,35 @@ function saveFile(filePath, data) {
     }
 }
 
-function loadServerURL() {
+function loadConfig() {
     let configPath = `${localServerDir}/config.json`;
-    fs.readFile(configPath, 'utf8', (err, data) => {
-        if (err) {
-            logger.error(`Error: ${JSON.stringify(err)}`);
-            return;
-        }
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    logger.info(JSON.stringify(config));
+    return config;
+}
 
-        try {
-            config = JSON.parse(data);
-            logger.info(JSON.stringify(config));
-            !localServerError && win.loadURL(`https://localhost:${config.port}`);
-            let masterUrl = `https://${getLocalIp()}:${config.port}`;
-            config.master_url = masterUrl;
-            setTimeout(() => {
-                win.setTitle(`GIH - ${masterUrl}`);
-            }, 4000);
-            fs.writeFile(configPath, JSON.stringify(config, null, 2), (err) => {
-                if (err) {
-                    logger.error('Error writing to the config file:', err);
-                } else {
-                    logger.info('Text has been written to the config file.');
-                }
-            });
-        } catch (error) {
-            logger.error('Error parsing JSON:', error);
-        }
-    });
+function loadServerURL() {
+    try {
+        !localServerError && win.loadURL(`https://localhost:${config.port}?fromApp=true`);
+        let masterUrl = `https://${getLocalIp()}:${config.port}`;
+        config.master_url = masterUrl;
+        setTimeout(() => {
+            win.setTitle(`GIH - ${masterUrl}`);
+        }, 4000);
+        fs.writeFile(configPath, JSON.stringify(config, null, 2), (err) => {
+            if (err) {
+                logger.error('Error writing to the config file:', err);
+            } else {
+                logger.info('Text has been written to the config file.');
+            }
+        });
+    } catch (error) {
+        logger.error('Error parsing JSON:', error);
+    }
 }
 
 function createWindow() {
-    startServer();
+    setStation();
     setMenu();
     // Create a new browser window
     win = new BrowserWindow({
@@ -221,10 +247,10 @@ function createWindow() {
     // Listen for messages from the renderer process
     ipcMain.on('message-from-renderer', (event, data) => {
         console.log('Message from renderer process:', data);
-        if (data.message === 'updateMaster') {
-            updateMaster({ ...config, port: data.port });
+        if (data.message === 'updateApp') {
+            updateApp({ ...config, ...data});
         } else if (data.message === 'cancelSettings') {
-            loadServerURL();
+            setStation();
         }
         // Reply to the renderer process
         event.sender.send('message-from-main', 'Hello from main process!');
